@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { replaceQueueWithSongs } from '@/lib/queue-client'
 import { SongRow } from '@/components/song-row'
 import { ArrowLeft, Play, Heart, Share2 } from 'lucide-react'
 
@@ -81,6 +82,25 @@ export default function AlbumPage() {
 
     fetchAlbumData()
   }, [albumId, user])
+
+  const handlePlaySong = async (songId: string) => {
+    try {
+      const orderedSongIds = songs.map((song) => song.id)
+      const startIdx = orderedSongIds.indexOf(songId)
+
+      if (startIdx >= 0) {
+        const rotated = [
+          ...orderedSongIds.slice(startIdx),
+          ...orderedSongIds.slice(0, startIdx),
+        ]
+        await replaceQueueWithSongs(rotated)
+      }
+    } catch {
+      // Navigation still works if queue priming fails.
+    }
+
+    router.push(`/player?song=${songId}`)
+  }
 
   if (loading) {
     return (
@@ -194,7 +214,7 @@ export default function AlbumPage() {
                     key={song.id}
                     song={song}
                     index={index + 1}
-                    onPlay={(s) => router.push(`/player?song=${s.id}`)}
+                    onPlay={(s) => handlePlaySong(s.id)}
                   />
                 ))}
               </div>

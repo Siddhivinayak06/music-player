@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { replaceQueueFromAlbum } from '@/lib/queue-client'
 import { Play, MoreVertical } from 'lucide-react'
 
 interface AlbumCardProps {
@@ -34,10 +35,16 @@ export function AlbumCard({ id, title, artist, coverImage, songCount }: AlbumCar
     fetchFirst()
   }, [id])
 
-  const handlePlay = (e: React.MouseEvent) => {
+  const handlePlay = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
     if (firstSongId) {
+      try {
+        await replaceQueueFromAlbum(id, firstSongId)
+      } catch {
+        // Navigation still works if queue priming fails.
+      }
       router.push(`/player?song=${firstSongId}`)
     } else {
       router.push(`/album/${id}`)
@@ -45,8 +52,7 @@ export function AlbumCard({ id, title, artist, coverImage, songCount }: AlbumCar
   }
 
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-card/60 hover:bg-card transition-all duration-300"
-      style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="group relative rounded-xl overflow-hidden bg-card/70 hover:bg-card transition-all duration-300 border border-border shadow-sm">
       <Link href={`/album/${id}`}>
         <div className="relative aspect-square overflow-hidden">
           {coverImage ? (
@@ -58,21 +64,21 @@ export function AlbumCard({ id, title, artist, coverImage, songCount }: AlbumCar
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.08))' }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5">
+              style={{ background: 'linear-gradient(135deg, color-mix(in oklab, var(--primary) 15%, transparent), color-mix(in oklab, var(--accent) 12%, transparent))' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-primary/70" strokeWidth="1.5">
                 <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
               </svg>
             </div>
           )}
 
           {/* Hover overlay with play button */}
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="absolute inset-0 bg-foreground/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
             <button
               onClick={handlePlay}
               className="w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-110"
               style={{
-                background: 'linear-gradient(135deg, #a855f7, #9333ea)',
-                boxShadow: '0 4px 20px rgba(168,85,247,0.5)',
+                background: 'linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 70%, var(--accent)))',
+                boxShadow: '0 4px 20px color-mix(in oklab, var(--primary) 45%, transparent)',
               }}
             >
               <Play size={20} fill="white" stroke="none" />

@@ -72,6 +72,24 @@ CREATE TABLE IF NOT EXISTS follows (
   CHECK(follower_id != following_id)
 );
 
+-- Create queue items table
+CREATE TABLE IF NOT EXISTS queue_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, song_id)
+);
+
+-- Create play history table
+CREATE TABLE IF NOT EXISTS play_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+  played_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE albums ENABLE ROW LEVEL SECURITY;
@@ -80,6 +98,8 @@ ALTER TABLE playlists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE playlist_songs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE song_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE queue_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE play_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users
 CREATE POLICY "Public user profiles" ON users
@@ -164,6 +184,29 @@ CREATE POLICY "Users can follow others" ON follows
 CREATE POLICY "Users can unfollow" ON follows
   FOR DELETE USING (auth.uid() = follower_id);
 
+-- RLS Policies for queue_items
+CREATE POLICY "Users can view own queue" ON queue_items
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can add own queue items" ON queue_items
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own queue" ON queue_items
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own queue" ON queue_items
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- RLS Policies for play_history
+CREATE POLICY "Users can view own play history" ON play_history
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own play history" ON play_history
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own play history" ON play_history
+  FOR DELETE USING (auth.uid() = user_id);
+
 -- Create indexes for better performance
 CREATE INDEX idx_songs_album_id ON songs(album_id);
 CREATE INDEX idx_songs_user_id ON songs(user_id);
@@ -174,3 +217,6 @@ CREATE INDEX idx_song_likes_user_id ON song_likes(user_id);
 CREATE INDEX idx_song_likes_song_id ON song_likes(song_id);
 CREATE INDEX idx_follows_follower_id ON follows(follower_id);
 CREATE INDEX idx_follows_following_id ON follows(following_id);
+CREATE INDEX idx_queue_items_user_position ON queue_items(user_id, position);
+CREATE INDEX idx_play_history_user_played_at ON play_history(user_id, played_at DESC);
+CREATE INDEX idx_song_likes_user_created ON song_likes(user_id, created_at DESC);

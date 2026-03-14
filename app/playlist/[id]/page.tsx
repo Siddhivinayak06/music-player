@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { replaceQueueWithSongs } from '@/lib/queue-client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SongRow } from '@/components/song-row'
@@ -112,6 +113,25 @@ export default function PlaylistPage() {
       .eq('song_id', songId)
 
     setSongs(songs.filter(s => s.id !== songId))
+  }
+
+  const handlePlaySong = async (songId: string) => {
+    try {
+      const orderedSongIds = songs.map((song) => song.id)
+      const startIdx = orderedSongIds.indexOf(songId)
+
+      if (startIdx >= 0) {
+        const rotated = [
+          ...orderedSongIds.slice(startIdx),
+          ...orderedSongIds.slice(0, startIdx),
+        ]
+        await replaceQueueWithSongs(rotated)
+      }
+    } catch {
+      // Navigation still works if queue priming fails.
+    }
+
+    router.push(`/player?song=${songId}`)
   }
 
   if (loading) {
@@ -225,7 +245,7 @@ export default function PlaylistPage() {
                   <SongRow
                     song={song}
                     index={index + 1}
-                    onPlay={(s) => router.push(`/player?song=${s.id}`)}
+                    onPlay={(s) => handlePlaySong(s.id)}
                   />
                   {isOwner && (
                     <Button

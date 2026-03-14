@@ -13,10 +13,13 @@ import { ArrowLeft, Upload, Music, AlertCircle, CheckCircle2 } from 'lucide-reac
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface SongFile {
+  id: string
   file: File
   title: string
   artist: string
   duration?: number
+  status: 'pending' | 'uploading' | 'done' | 'failed'
+  error?: string
 }
 
 export default function UploadPage() {
@@ -29,6 +32,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [activeAlbumId, setActiveAlbumId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -51,9 +55,11 @@ export default function UploadPage() {
       audio.src = URL.createObjectURL(file)
 
       const newSong: SongFile = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         file,
         title: file.name.replace(/\.[^/.]+$/, ''),
         artist: albumArtist || 'Unknown Artist',
+        status: 'pending',
       }
 
       audio.onloadedmetadata = () => {
@@ -77,6 +83,80 @@ export default function UploadPage() {
     setSongs(songs.filter((_, i) => i !== index))
   }
 
+  const setSongStatus = (
+    songId: string,
+    status: SongFile['status'],
+    nextError?: string
+  ) => {
+    setSongs((prev) =>
+      prev.map((song) =>
+        song.id === songId
+          ? {
+              ...song,
+              status,
+              error: nextError,
+            }
+          : song
+      )
+    )
+  }
+
+  const uploadSingleSong = async (song: SongFile, albumId: string, orderIndex: number) => {
+    if (!supabase || !user) return
+
+    setSongStatus(song.id, 'uploading')
+
+    try {
+      const fileName = `${albumId}/${Date.now()}-${song.file.name}`
+      const { error: storageError } = await supabase.storage
+        .from('music')
+        .upload(fileName, song.file)
+
+      if (storageError) throw storageError
+
+      const { data: publicUrlData } = supabase.storage
+        .from('music')
+        .getPublicUrl(fileName)
+
+      const { error: songError } = await supabase
+        .from('songs')
+        .insert({
+          album_id: albumId,
+          user_id: user.id,
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration || 0,
+          audio_url: publicUrlData.publicUrl,
+          order_index: orderIndex,
+        })
+
+      if (songError) throw songError
+
+      setSongStatus(song.id, 'done')
+      return true
+    } catch (err) {
+      setSongStatus(
+        song.id,
+        'failed',
+        err instanceof Error ? err.message : 'Upload failed'
+      )
+      return false
+    }
+  }
+
+  const retrySong = async (songId: string) => {
+    if (!activeAlbumId) {
+      setError('Retry is available after the first album upload starts')
+      return
+    }
+
+    const song = songs.find((s) => s.id === songId)
+    if (!song) return
+
+    const orderIndex = songs.findIndex((s) => s.id === songId)
+    await uploadSingleSong(song, activeAlbumId, orderIndex)
+  }
+
   const handleUpload = async () => {
     if (!user || !supabase || !albumTitle.trim() || songs.length === 0) {
       setError('Please provide album title and add songs')
@@ -87,58 +167,53 @@ export default function UploadPage() {
     setError(null)
 
     try {
-      // Create album
-      const { data: albumData, error: albumError } = await supabase
-        .from('albums')
-        .insert({
-          user_id: user.id,
-          title: albumTitle,
-          artist: albumArtist || 'Unknown Artist',
-          description: albumDescription || null,
-        })
-        .select()
-        .single()
+      let albumId = activeAlbumId
 
-      if (albumError) throw albumError
-      if (!albumData) throw new Error('Failed to create album')
-
-      // Upload songs
-      for (let i = 0; i < songs.length; i++) {
-        const song = songs[i]
-
-        // Upload audio file to Supabase Storage
-        const fileName = `${albumData.id}/${Date.now()}-${song.file.name}`
-        const { data: storageData, error: storageError } = await supabase.storage
-          .from('music')
-          .upload(fileName, song.file)
-
-        if (storageError) throw storageError
-
-        // Get public URL
-        const { data: publicUrlData } = supabase.storage
-          .from('music')
-          .getPublicUrl(fileName)
-
-        // Create song record
-        const { error: songError } = await supabase
-          .from('songs')
+      if (!albumId) {
+        const { data: albumData, error: albumError } = await supabase
+          .from('albums')
           .insert({
-            album_id: albumData.id,
             user_id: user.id,
-            title: song.title,
-            artist: song.artist,
-            duration: song.duration || 0,
-            audio_url: publicUrlData.publicUrl,
-            order_index: i,
+            title: albumTitle,
+            artist: albumArtist || 'Unknown Artist',
+            description: albumDescription || null,
           })
+          .select()
+          .single()
 
-        if (songError) throw songError
+        if (albumError) throw albumError
+        if (!albumData) throw new Error('Failed to create album')
+
+        albumId = albumData.id
+        setActiveAlbumId(albumId)
       }
 
-      setSuccess(true)
-      setTimeout(() => {
-        router.push(`/album/${albumData.id}`)
-      }, 2000)
+      if (!albumId) {
+        throw new Error('Failed to initialize album upload')
+      }
+
+      let successCount = 0
+
+      for (let i = 0; i < songs.length; i++) {
+        if (songs[i].status === 'done') {
+          successCount += 1
+          continue
+        }
+
+        const ok = await uploadSingleSong(songs[i], albumId, i)
+        if (ok) successCount += 1
+      }
+
+      if (successCount === songs.length) {
+        setSuccess(true)
+        setTimeout(() => {
+          router.push(`/album/${albumId}`)
+        }, 2000)
+        return
+      }
+
+      const failedCount = songs.length - successCount
+      setError(`${failedCount} song${failedCount === 1 ? '' : 's'} failed. Use Retry on failed items.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -252,31 +327,53 @@ export default function UploadPage() {
                     {songs.length} song{songs.length !== 1 ? 's' : ''} added
                   </h3>
                   {songs.map((song, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 bg-background rounded-lg">
+                    <div key={song.id} className="flex items-center gap-4 p-4 bg-background rounded-lg">
                       <div className="flex-1 min-w-0">
                         <Input
                           placeholder="Song title"
                           value={song.title}
                           onChange={(e) => updateSong(index, 'title', e.target.value)}
                           className="mb-2"
+                          disabled={song.status === 'uploading' || song.status === 'done'}
                         />
                         <Input
                           placeholder="Song artist"
                           value={song.artist}
                           onChange={(e) => updateSong(index, 'artist', e.target.value)}
+                          disabled={song.status === 'uploading' || song.status === 'done'}
                         />
+                        <p className="text-xs mt-1" style={{ color: song.status === 'failed' ? '#f87171' : 'rgba(255,255,255,0.45)' }}>
+                          {song.status === 'pending' && 'Pending'}
+                          {song.status === 'uploading' && 'Uploading...'}
+                          {song.status === 'done' && 'Uploaded'}
+                          {song.status === 'failed' && (song.error || 'Failed')}
+                        </p>
                       </div>
                       <div className="text-sm text-muted-foreground flex-shrink-0">
                         {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : '?'}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSong(index)}
-                        className="text-destructive flex-shrink-0"
-                      >
-                        Remove
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        {song.status === 'failed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => retrySong(song.id)}
+                            disabled={uploading}
+                            className="flex-shrink-0"
+                          >
+                            Retry
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSong(index)}
+                          className="text-destructive flex-shrink-0"
+                          disabled={song.status === 'uploading' || song.status === 'done'}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Heart, MoreVertical, Play } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
+import { toggleSongLike } from '@/lib/likes-client'
 
 interface Song {
   id: string
@@ -32,16 +32,20 @@ export function SongRow({ song, index, onPlay }: SongRowProps) {
   }
 
   const handleLike = async () => {
-    if (!user || !supabase) return
+    if (!user) return
+
+    const previous = isLiked
+    setIsLiked(!previous)
     setLiking(true)
+
     try {
-      if (isLiked) {
-        await supabase.from('song_likes').delete().eq('user_id', user.id).eq('song_id', song.id)
-      } else {
-        await supabase.from('song_likes').insert({ user_id: user.id, song_id: song.id })
-      }
-      setIsLiked(!isLiked)
-    } finally { setLiking(false) }
+      const response = await toggleSongLike(song.id)
+      setIsLiked(response.liked)
+    } catch {
+      setIsLiked(previous)
+    } finally {
+      setLiking(false)
+    }
   }
 
   return (

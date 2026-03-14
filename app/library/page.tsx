@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { fetchRecentlyPlayed, RecentlyPlayedItem } from '@/lib/history-client'
 import { AlbumCard } from '@/components/album-card'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { Button } from '@/components/ui/button'
 import { Music, Search, ArrowLeft, Upload } from 'lucide-react'
 
 interface Album {
@@ -24,6 +27,7 @@ export default function LibraryPage() {
   const [allAlbums, setAllAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all')
+  const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedItem[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +49,24 @@ export default function LibraryPage() {
     fetchData()
   }, [user])
 
+  useEffect(() => {
+    const fetchRecent = async () => {
+      if (!user) {
+        setRecentlyPlayed([])
+        return
+      }
+
+      try {
+        const response = await fetchRecentlyPlayed(6)
+        setRecentlyPlayed(response.data)
+      } catch {
+        setRecentlyPlayed([])
+      }
+    }
+
+    fetchRecent()
+  }, [user])
+
   const displayed = allAlbums
     .filter(a => activeTab === 'all' || a.user_id === user?.id)
     .filter(a =>
@@ -53,43 +75,37 @@ export default function LibraryPage() {
     )
 
   return (
-    <div className="min-h-screen"
-      style={{ background: 'linear-gradient(180deg, #0a0a14 0%, #0d0d1a 100%)' }}>
+    <div className="min-h-screen">
 
       {/* Header */}
-      <header className="sticky top-0 z-10"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(12px)' }}>
+      <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center gap-3">
           <button onClick={() => router.push('/')}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-            style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)' }}>
+            className="w-9 h-9 rounded-full border bg-card text-muted-foreground flex items-center justify-center transition-colors">
             <ArrowLeft size={16} />
           </button>
-          <h1 className="text-lg font-bold text-white flex-1">Your Library</h1>
+          <h1 className="text-lg font-bold flex-1">Your Library</h1>
           <Link href="/library/upload">
-            <button className="px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-2"
-              style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)', color: '#fff', boxShadow: '0 2px 10px rgba(168,85,247,0.25)' }}>
+            <Button size="sm" className="gap-2">
               <Upload size={13} /> Upload
-            </button>
+            </Button>
           </Link>
+          <ThemeToggle />
         </div>
       </header>
 
       {/* Search + Tabs */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(15,15,28,0.4)' }}>
+      <div className="border-b bg-background/50">
         <div className="max-w-6xl mx-auto px-5 py-4 space-y-3">
           {/* Search */}
           <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.2)' }} />
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search albums or artists..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 outline-none transition-all"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(168,85,247,0.3)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-card border border-border text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary/40"
             />
           </div>
 
@@ -99,9 +115,9 @@ export default function LibraryPage() {
               <button key={tab}
                 className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
-                  background: activeTab === tab ? 'rgba(168,85,247,0.15)' : 'transparent',
-                  color: activeTab === tab ? '#c084fc' : 'rgba(255,255,255,0.35)',
-                  border: activeTab === tab ? '1px solid rgba(168,85,247,0.2)' : '1px solid transparent',
+                  background: activeTab === tab ? 'color-mix(in oklab, var(--primary) 16%, transparent)' : 'transparent',
+                  color: activeTab === tab ? 'var(--primary)' : 'var(--muted-foreground)',
+                  border: activeTab === tab ? '1px solid color-mix(in oklab, var(--primary) 35%, transparent)' : '1px solid transparent',
                 }}
                 onClick={() => setActiveTab(tab)}>
                 {tab === 'all' ? 'All Albums' : 'My Albums'}
@@ -113,23 +129,67 @@ export default function LibraryPage() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-5 py-8">
+        <section className="mb-8 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Quick Access
+            </h2>
+            <Link href="/library/liked">
+              <Button variant="outline" size="sm">
+                Liked Songs
+              </Button>
+            </Link>
+          </div>
+
+          {user && recentlyPlayed.length > 0 && (
+            <div
+              className="rounded-xl p-3"
+              style={{
+                border: '1px solid var(--border)',
+                background: 'color-mix(in oklab, var(--card) 90%, transparent)',
+              }}
+            >
+              <p className="text-xs mb-2 text-muted-foreground">
+                Recently Played
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {recentlyPlayed.map((item) => (
+                  <button
+                    key={`${item.song.id}-${item.playedAt}`}
+                    className="text-left rounded-lg px-3 py-2 transition-colors"
+                    style={{
+                      border: '1px solid var(--border)',
+                      background: 'color-mix(in oklab, var(--card) 85%, transparent)',
+                    }}
+                    onClick={() => router.push(`/player?song=${item.song.id}`)}
+                  >
+                    <p className="text-sm font-medium text-foreground truncate">{item.song.title}</p>
+                    <p className="text-xs truncate text-muted-foreground">
+                      {item.song.artist}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         {loading ? (
-          <p className="text-center py-16" style={{ color: 'rgba(255,255,255,0.35)' }}>Loading albums...</p>
+          <p className="text-center py-16 text-muted-foreground">Loading albums...</p>
         ) : displayed.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ background: 'rgba(168,85,247,0.08)' }}>
-              <Music className="h-7 w-7" style={{ color: 'rgba(168,85,247,0.35)' }} />
+              style={{ background: 'color-mix(in oklab, var(--primary) 12%, transparent)' }}>
+              <Music className="h-7 w-7 text-primary/70" />
             </div>
-            <p className="mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="mb-4 text-muted-foreground">
               {activeTab === 'my' ? "You haven't uploaded any albums yet" : 'No albums found'}
             </p>
             {activeTab === 'my' && (
               <Link href="/library/upload">
-                <button className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)' }}>
+                <Button>
                   Upload Your First Album
-                </button>
+                </Button>
               </Link>
             )}
           </div>

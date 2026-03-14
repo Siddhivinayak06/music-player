@@ -43,7 +43,7 @@ export default function PlaylistsPage() {
   }, [user])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !supabase) return
 
     const subscription = supabase
       .channel(`user-playlists-${user.id}`)
@@ -75,7 +75,7 @@ export default function PlaylistsPage() {
   }, [user, playlists])
 
   const fetchPlaylists = async () => {
-    if (!user) {
+    if (!user || !supabase) {
       setLoading(false)
       return
     }
@@ -103,7 +103,7 @@ export default function PlaylistsPage() {
   }
 
   const handleCreatePlaylist = async () => {
-    if (!user || !newPlaylistTitle.trim()) return
+    if (!user || !supabase || !newPlaylistTitle.trim()) return
 
     setCreating(true)
     try {
@@ -130,6 +130,7 @@ export default function PlaylistsPage() {
   }
 
   const handleDeletePlaylist = async (id: string) => {
+    if (!supabase) return
     if (!confirm('Delete this playlist?')) return
 
     await supabase.from('playlists').delete().eq('id', id)
@@ -137,6 +138,7 @@ export default function PlaylistsPage() {
   }
 
   const togglePlaylistPublic = async (playlist: Playlist) => {
+    if (!supabase) return
     await supabase
       .from('playlists')
       .update({ is_public: !playlist.is_public })

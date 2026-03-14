@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Music, AlertCircle } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -27,74 +28,66 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: 'linear-gradient(135deg, #0a0a14, #111122, #0d0d1a)' }}>
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(139,92,246,0.1))', boxShadow: '0 0 30px rgba(168,85,247,0.1)' }}>
-            <Music className="h-7 w-7" style={{ color: '#a855f7' }} />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Welcome back</h1>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem' }}>Sign in to your account</p>
+    <div className="min-h-screen px-4 py-8 sm:py-10">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mb-8 flex justify-end">
+          <ThemeToggle />
         </div>
 
-        {/* Form Card */}
-        <div className="rounded-2xl p-6"
-          style={{ background: 'rgba(20,20,35,0.7)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
-          <form onSubmit={handleSignIn} className="space-y-5">
+        <div className="surface-glass rounded-2xl p-6 sm:p-7">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+              <Music className="h-7 w-7" />
+            </div>
+            <h1 className="mb-1 text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-sm text-muted-foreground">Sign in to your account</p>
+          </div>
+
+          <form onSubmit={handleSignIn} className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.15)', color: '#f87171' }}>
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 <AlertCircle size={14} />
                 {error}
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>Email</label>
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
               <input
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 outline-none transition-all"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(168,85,247,0.4)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                className="w-full rounded-xl border border-border bg-background/40 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>Password</label>
+              <label className="text-xs font-medium text-muted-foreground">Password</label>
               <input
                 type="password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 outline-none transition-all"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(168,85,247,0.4)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                className="w-full rounded-xl border border-border bg-background/40 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)', boxShadow: '0 4px 16px rgba(168,85,247,0.35)' }}
+              className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <div className="mt-5 text-center">
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              Don't have an account?{' '}
-              <Link href="/auth/signup" style={{ color: '#a855f7' }} className="hover:underline">Sign up</Link>
+            <p className="text-xs text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link href="/auth/signup" className="font-medium text-primary hover:underline">Sign up</Link>
             </p>
           </div>
         </div>
