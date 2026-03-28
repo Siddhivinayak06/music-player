@@ -65,21 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     if (error) throw error
-
-    if (data.user) {
-      // Create user profile
-      const { error: profileError } = await supabase.from('users').insert({
-        id: data.user.id,
-        email,
-        username,
-      })
-
-      if (profileError) {
-        // If profile creation fails, we should really delete the auth user or notify
-        console.error('Failed to create user profile:', profileError)
-        throw new Error(`Failed to create user profile: ${profileError.message}`)
-      }
-    }
+    // User profile is automatically created by the database trigger (on_auth_user_created)
+    // No need to manually insert into public.users
   }
 
   const signIn = async (email: string, password: string) => {
