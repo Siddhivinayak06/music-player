@@ -1,18 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { requireApiUser } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireApiUser(request)
+    if ('error' in auth) {
+      return auth.error
+    }
+
     const { searchParams } = new URL(request.url)
     const albumId = searchParams.get('album_id')
     const userId = searchParams.get('user_id')
 
-    let query = supabase.from('songs').select('*')
+    let query = auth.supabase.from('songs').select('*')
 
     if (albumId) {
       query = query.eq('album_id', albumId)

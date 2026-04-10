@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Music, Upload, LogOut, Library, Sparkles } from 'lucide-react'
+import { AlbumGridSkeleton } from '@/components/skeletons'
 
 interface Album {
   id: string
@@ -47,14 +48,13 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center bg-primary/15">
-            <Music className="h-6 w-6 animate-pulse text-primary" />
-          </div>
-          <p className="text-muted-foreground">Loading...</p>
+      <>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-1">Recently Added</h2>
+          <p className="text-sm text-muted-foreground">Discover fresh uploads from the community</p>
         </div>
-      </div>
+        <AlbumGridSkeleton count={8} />
+      </>
     )
   }
 
@@ -122,72 +122,40 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b bg-background/70 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Music className="h-4 w-4" />
+    <>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-1">Recently Added</h2>
+        <p className="text-sm text-muted-foreground">Discover fresh uploads from the community</p>
+      </div>
+
+      {albumLoading ? (
+        <AlbumGridSkeleton count={8} />
+      ) : albums.length === 0 ? (
+        <Card className="surface-glass">
+          <CardContent className="text-center py-16">
+            <div className="h-16 w-16 rounded-full mx-auto mb-4 bg-primary/10 text-primary flex items-center justify-center">
+              <Music className="h-8 w-8" />
             </div>
-            <h1 className="text-lg font-bold">Vinyl</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/library">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Library className="h-4 w-4" />
-                Library
-              </Button>
-            </Link>
+            <p className="mb-5 text-muted-foreground">No albums yet. Be the first to upload!</p>
             <Link href="/library/upload">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Upload
-              </Button>
+              <Button>Upload Music</Button>
             </Link>
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" className="gap-2" onClick={() => signOut()}>
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
-          </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {albums.map((album) => (
+            <AlbumCard
+              key={album.id}
+              id={album.id}
+              title={album.title}
+              artist={album.artist}
+              coverImage={album.cover_image_url || undefined}
+              songCount={album.song_count || 0}
+            />
+          ))}
         </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-5 py-10">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-1">Recently Added</h2>
-          <p className="text-sm text-muted-foreground">Discover fresh uploads from the community</p>
-        </div>
-
-        {albumLoading ? (
-          <div className="text-center py-16 text-muted-foreground">Loading albums...</div>
-        ) : albums.length === 0 ? (
-          <Card className="surface-glass">
-            <CardContent className="text-center py-16">
-              <div className="h-16 w-16 rounded-full mx-auto mb-4 bg-primary/10 text-primary flex items-center justify-center">
-                <Music className="h-8 w-8" />
-              </div>
-              <p className="mb-5 text-muted-foreground">No albums yet. Be the first to upload!</p>
-              <Link href="/library/upload">
-                <Button>Upload Music</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {albums.map((album) => (
-              <AlbumCard
-                key={album.id}
-                id={album.id}
-                title={album.title}
-                artist={album.artist}
-                coverImage={album.cover_image_url || undefined}
-                songCount={album.song_count || 0}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </>
   )
 }

@@ -41,12 +41,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+
+      // Handle security-relevant auth events
+      switch (event) {
+        case 'SIGNED_OUT':
+          // Clear any cached data on sign out
+          setSession(null)
+          setUser(null)
+          break
+
+        case 'TOKEN_REFRESHED':
+          // Session was automatically refreshed — update state
+          break
+
+        case 'USER_UPDATED':
+          // User metadata changed
+          break
+      }
     })
 
-    return () => subscription?.unsubscribe()
+    // Proactive session refresh: check token expiry every 30 seconds
+    // and trigger a refresh if the token expires within 5 minutes.
+    const refreshInterval = setInterval(async () => {
+      if (!supabase) return
+
+      const {
+        data: { session: current },
+      } = await supabase.auth.getSession()
+
+      if (!current) return
+
+      const expiresAt = current.expires_at
+      if (expiresAt) {
+        const secondsLeft = expiresAt - Math.floor(Date.now() / 1000)
+
+        // Refresh if less than 5 minutes remaining
+        if (secondsLeft < 300) {
+          await supabase.auth.refreshSession()
+        }
+      }
+    }, 30_000)
+
+    return () => {
+      subscription?.unsubscribe()
+      clearInterval(refreshInterval)
+    }
   }, [])
 
   const signUp = async (email: string, password: string, username: string) => {

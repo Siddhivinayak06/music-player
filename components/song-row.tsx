@@ -49,46 +49,39 @@ export function SongRow({ song, index, onPlay }: SongRowProps) {
   }
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors"
-      style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.04)',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.06)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}>
+    <div className="group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors bg-muted/30 border border-border/30 hover:bg-primary/[0.06]">
 
       {/* Index */}
-      <div className="w-7 text-center text-xs font-medium flex-shrink-0"
-        style={{ color: 'rgba(255,255,255,0.25)' }}>
+      <div className="w-7 text-center text-xs font-medium flex-shrink-0 text-muted-foreground">
         {index}
       </div>
 
       {/* Play button */}
       <button
-        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-        style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)' }}
+        className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-primary text-primary-foreground shadow-md"
         onClick={() => onPlay?.(song)}
       >
-        <Play size={13} fill="white" stroke="none" />
+        <Play size={13} fill="currentColor" stroke="none" />
       </button>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{song.title}</p>
-        <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{song.artist}</p>
+        <p className="text-sm font-medium text-foreground truncate">{song.title}</p>
+        <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
       </div>
 
       {/* Duration */}
-      <div className="text-xs flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>
+      <div className="text-xs flex-shrink-0 text-muted-foreground tabular-nums">
         {formatDuration(song.duration)}
       </div>
 
       {/* Like */}
       <button
-        className="w-7 h-7 flex items-center justify-center flex-shrink-0 transition-colors"
+        className={`w-7 h-7 flex items-center justify-center flex-shrink-0 transition-colors border-none bg-transparent cursor-pointer ${
+          isLiked ? 'text-primary' : 'text-muted-foreground/40 hover:text-primary/60'
+        }`}
         onClick={handleLike}
         disabled={liking || !user}
-        style={{ color: isLiked ? '#a855f7' : 'rgba(255,255,255,0.2)', background: 'none', border: 'none', cursor: 'pointer' }}
       >
         <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
       </button>

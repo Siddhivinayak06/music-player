@@ -453,7 +453,18 @@ const vinylCSS = `
 }
 
 .vr-disc.spinning {
-  animation: vinylSpin 2.25s linear infinite, vinylWobble 2.25s linear infinite;
+  animation: vinylSpin 2.25s linear infinite;
+}
+
+.vr-wobbler {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+}
+
+.vr-wobbler.spinning {
+  animation: vinylWobble 2.25s linear infinite;
 }
 
 .vr-specular {
@@ -468,8 +479,9 @@ const vinylCSS = `
   pointer-events: none;
 }
 
+/* Specular highlights now inherit parent rotation to stay in sync with the image */
 .vr-disc.spinning .vr-specular {
-  animation: vinylSpecular 2.25s linear infinite;
+  opacity: 0.55;
 }
 
 .vr-rim {
@@ -1146,18 +1158,20 @@ function PlayerContent() {
                                 </div>
 
                                 <div className="vr-platter">
-                                    <div className={`vr-disc ${isPlaying ? 'spinning' : ''}`}>
-                                        <div className="vr-lightfall" />
-                                        <div className="vr-shade" />
-                                        <div className="vr-dust" />
-                                        <div className="vr-specular" />
-                                        <div className="vr-rim" />
-                                        <div className="vr-center">
-                                            {album?.cover_image_url
-                                                ? <img src={album.cover_image_url} alt="" />
-                                                : <div className="vr-gradient" />}
-                                            <div className="vr-label-ring" />
-                                            <div className="vr-spindle" />
+                                    <div className={`vr-wobbler ${isPlaying ? 'spinning' : ''}`}>
+                                        <div className={`vr-disc ${isPlaying ? 'spinning' : ''}`}>
+                                            <div className="vr-lightfall" />
+                                            <div className="vr-shade" />
+                                            <div className="vr-dust" />
+                                            <div className="vr-specular" />
+                                            <div className="vr-rim" />
+                                            <div className="vr-center">
+                                                {album?.cover_image_url
+                                                    ? <img src={album.cover_image_url} alt="" />
+                                                    : <div className="vr-gradient" />}
+                                                <div className="vr-label-ring" />
+                                                <div className="vr-spindle" />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className={`ta-wrap ${isPlaying ? 'playing' : 'resting'}`}>

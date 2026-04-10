@@ -1,19 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { Music, AlertCircle } from 'lucide-react'
+import { Music, AlertCircle, ArrowLeft } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { signIn, user, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/')
+    }
+  }, [authLoading, user, router])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +28,10 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await signIn(email, password)
-      router.push('/')
+      // Redirect to the page the user was trying to access, or home
+      const params = new URLSearchParams(window.location.search)
+      const redirect = params.get('redirect') || '/'
+      router.push(redirect)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally { setLoading(false) }
@@ -30,7 +40,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen px-4 py-8 sm:py-10">
       <div className="mx-auto w-full max-w-md">
-        <div className="mb-8 flex justify-end">
+        <div className="mb-8 flex items-center justify-between">
+          <Link href="/" className="group flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground">
+            <ArrowLeft size={16} className="transition group-hover:-translate-x-0.5" />
+            Back to Home
+          </Link>
           <ThemeToggle />
         </div>
 

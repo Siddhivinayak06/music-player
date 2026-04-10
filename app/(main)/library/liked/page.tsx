@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth-context'
 import { fetchLikedSongs, LikedSongItem } from '@/lib/likes-client'
 import { replaceQueueWithSongs } from '@/lib/queue-client'
 import { SongRow } from '@/components/song-row'
+import { Button } from '@/components/ui/button'
+import { SongListSkeleton } from '@/components/skeletons'
 
 interface Song {
   id: string
@@ -15,7 +17,7 @@ interface Song {
   artist: string
   duration: number
   audio_url: string
-  album_id: string
+  album_id?: string
   is_liked?: boolean
 }
 
@@ -44,7 +46,7 @@ export default function LikedSongsPage() {
   }, [user])
 
   const songs = useMemo<Song[]>(() => {
-    return items.map((item) => ({
+    return items.map((item: LikedSongItem) => ({
       ...item.song,
       is_liked: true,
     }))
@@ -83,47 +85,49 @@ export default function LikedSongsPage() {
   }
 
   return (
-    <div className="min-h-screen"
-      style={{ background: 'linear-gradient(180deg, #0a0a14 0%, #0d0d1a 100%)' }}>
-      <header className="sticky top-0 z-10"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,20,0.85)', backdropFilter: 'blur(12px)' }}>
-        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.push('/library')}
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)' }}
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white">Liked Songs</h1>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{songs.length} songs</p>
-          </div>
-          <Heart size={16} color="#c084fc" fill="#c084fc" />
+    <>
+      <div className="mb-10 flex items-center gap-6">
+        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center shadow-xl border border-white/10">
+          <Heart size={40} className="text-primary fill-primary animate-pulse" />
         </div>
-      </header>
+        <div className="space-y-1">
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight">Liked Songs</h1>
+          <p className="text-muted-foreground font-medium">{songs.length} songs in your collection</p>
+        </div>
+      </div>
 
-      <main className="max-w-5xl mx-auto px-5 py-8">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/10 pb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+          <div className="flex items-center gap-4">
+             <span className="w-8 text-center">#</span>
+             <span>Title</span>
+          </div>
+          <span className="hidden sm:block">Album</span>
+        </div>
+
         {loading ? (
-          <p className="text-center py-16" style={{ color: 'rgba(255,255,255,0.35)' }}>Loading liked songs...</p>
+          <SongListSkeleton count={6} />
         ) : songs.length === 0 ? (
-          <div className="text-center py-16">
-            <Heart className="h-10 w-10 mx-auto mb-3" style={{ color: 'rgba(192,132,252,0.35)' }} />
-            <p style={{ color: 'rgba(255,255,255,0.4)' }}>No liked songs yet</p>
+          <div className="text-center py-24 surface-glass rounded-3xl border border-dashed border-border/50">
+            <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/20" />
+            <p className="text-muted-foreground max-w-xs mx-auto mb-6">You haven't liked any songs yet. Double tap on any track to add it here!</p>
+            <Link href="/">
+              <Button variant="outline" className="rounded-full px-8">Discover Music</Button>
+            </Link>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {songs.map((song, index) => (
+          <div className="space-y-1">
+            {songs.map((song: Song, index: number) => (
               <SongRow
                 key={song.id}
                 song={song}
                 index={index + 1}
-                onPlay={(s) => handlePlay(s.id)}
+                onPlay={(s: Song) => handlePlay(s.id)}
               />
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </>
   )
 }

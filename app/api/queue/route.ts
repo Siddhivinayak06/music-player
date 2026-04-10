@@ -1,51 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireApiUser, createAuthedSupabaseClient } from '@/lib/api-auth'
 
-function getToken(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null
-  }
-
-  return authHeader.slice(7)
-}
-
-function getSupabaseClient(accessToken?: string) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: accessToken
-        ? {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        : undefined,
-    }
-  )
-}
-
-async function requireUser(request: NextRequest) {
-  const token = getToken(request)
-  if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  const supabase = getSupabaseClient(token)
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token)
-
-  if (error || !user) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  return { user, supabase }
-}
-
-async function getQueue(supabase: ReturnType<typeof getSupabaseClient>, userId: string) {
+async function getQueue(supabase: ReturnType<typeof createAuthedSupabaseClient>, userId: string) {
   const { data, error } = await supabase
     .from('queue_items')
     .select('id, position, songs(*)')
@@ -65,7 +21,7 @@ async function getQueue(supabase: ReturnType<typeof getSupabaseClient>, userId: 
     }))
 }
 
-async function normalizePositions(supabase: ReturnType<typeof getSupabaseClient>, userId: string) {
+async function normalizePositions(supabase: ReturnType<typeof createAuthedSupabaseClient>, userId: string) {
   const queue = await getQueue(supabase, userId)
 
   for (let i = 0; i < queue.length; i++) {
@@ -78,7 +34,7 @@ async function normalizePositions(supabase: ReturnType<typeof getSupabaseClient>
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireUser(request)
+    const auth = await requireApiUser(request)
     if ('error' in auth) {
       return auth.error
     }
@@ -94,7 +50,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireUser(request)
+    const auth = await requireApiUser(request)
     if ('error' in auth) {
       return auth.error
     }
